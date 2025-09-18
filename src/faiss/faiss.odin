@@ -26,6 +26,11 @@ FaissSearchParameters :: ^opaque
 FaissRangeSearchResult :: ^opaque
 FaissIDSelector :: ^opaque
 
+// Specific ID selector variants
+FaissIDSelectorRange :: ^opaque
+FaissIDSelectorOr :: ^opaque
+FaissIDSelectorAnd :: ^opaque
+
 FaissIndex :: ^opaque
 FaissIndexFlat :: ^opaque
 FaissIndexFlatIP :: ^opaque
@@ -37,13 +42,22 @@ FaissIndexFlat1D :: ^opaque
 // Main foreign import block for IndexFlat functions
 @(default_calling_convention = "c", link_prefix = "faiss_")
 foreign lib {
+	// Error API (error_c.h)
+	get_last_error :: proc() -> ^cstring ---
+
+	// Index factory (index_factory_c.h)
+	index_factory :: proc(p_index: ^^FaissIndex, d: c.int, description: cstring, metric: FaissMetricType) -> c.int ---
+
+	// Index I/O (index_io_c.h)
+	write_index_fname :: proc(index: ^FaissIndex, fname: cstring) -> c.int ---
 
 	SearchParameters_new :: proc(p_sp: ^^FaissSearchParameters, sel: ^FaissIDSelector) -> c.int ---
+	SearchParameters_free :: proc(sp: ^FaissSearchParameters) ---
 
 	Index_d :: proc(index: ^FaissIndex, p_d: ^c.int) -> c.int ---
-	Index_is_trained :: proc(index: ^FaissIndex, p_is_trained: ^c.int) -> c.int ---
-	Index_ntotal :: proc(index: ^FaissIndex, p_ntotal: ^idx_t) -> c.int ---
-	Index_metric_type :: proc(index: ^FaissIndex, p_metric_type: ^FaissMetricType) -> c.int ---
+	Index_is_trained :: proc(index: ^FaissIndex) -> c.int ---
+	Index_ntotal :: proc(index: ^FaissIndex) -> c.int ---
+	Index_metric_type :: proc(index: ^FaissIndex) -> c.int ---
 
 	Index_verbose :: proc(index: ^FaissIndex, p_verbose: ^c.int) -> c.int ---
 	Index_set_verbose :: proc(index: ^FaissIndex, verbose: c.int) -> c.int ---
@@ -62,6 +76,8 @@ foreign lib {
 	Index_reconstruct_n :: proc(index: ^FaissIndex, i0: idx_t, ni: idx_t, recons: [^]c.float) -> c.int ---
 	Index_compute_residual :: proc(index: ^FaissIndex, x: [^]c.float, residual: [^]c.float, key: idx_t) -> c.int ---
 	Index_compute_residual_n :: proc(index: ^FaissIndex, n: idx_t, x: [^]c.float, residuals: [^]c.float, keys: [^]idx_t) -> c.int ---
+
+	Index_free :: proc(index: ^FaissIndex) ---
 
 	// Standalone codec interface
 	Index_sa_code_size :: proc(index: ^FaissIndex, size: ^c.size_t) -> c.int ---
@@ -123,6 +139,13 @@ foreign lib {
 	IndexFlat1D_free :: proc(index: ^FaissIndexFlat1D) ---
 
 	IndexFlat1D_update_permutation :: proc(index: ^FaissIndexFlat1D) -> c.int ---
+
+	// ID selectors (impl/AuxIndexStructures_c.h)
+	IDSelector_free :: proc(sel: ^FaissIDSelector) ---
+	IDSelectorRange_new :: proc(p_sel: ^^FaissIDSelectorRange, imin: idx_t, imax: idx_t) -> c.int ---
+	IDSelectorRange_free :: proc(sel: ^FaissIDSelectorRange) ---
+	IDSelectorOr_new :: proc(p_sel: ^^FaissIDSelectorOr, lhs: ^FaissIDSelector, rhs: ^FaissIDSelector) -> c.int ---
+	IDSelectorAnd_new :: proc(p_sel: ^^FaissIDSelectorAnd, lhs: ^FaissIDSelector, rhs: ^FaissIDSelector) -> c.int ---
 }
 
 IndexFlatError :: enum {
