@@ -79,14 +79,15 @@ main :: proc() {
 			for j in 0 ..< k {
 				fmt.printf("%d (d=%2.3f)  ", I[i * k + j], D[i * k + j])
 			}
-			fmt.println("")
+			fmt.println(">")
 		}
 		delete(I)
 		delete(D)
 	}
 
 	// search xq
-	{I := make([]faiss.idx_t, k * nq)
+	{
+		I := make([]faiss.idx_t, k * nq)
 		D := make([]f32, k * nq)
 		if faiss.Index_search(
 			   index,

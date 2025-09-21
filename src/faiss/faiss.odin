@@ -2,7 +2,6 @@ package faiss
 
 import "core:c"
 
-
 when ODIN_OS == .Darwin {
 	foreign import lib "system:faiss_c"
 } else when ODIN_OS == .Linux {
@@ -13,24 +12,14 @@ when ODIN_OS == .Darwin {
 	foreign import lib "system:faiss_c"
 }
 
-
-// Forward declarations and types
-FaissMetricType :: MetricType // This should be defined in a separate metrics file
-
-
-// Opaque types - these represent C structs we don't need to see inside of
 opaque :: struct {}
-
-// Opaque C handles
-FaissSearchParameters :: ^opaque
+FaissMetricType :: MetricType
+FaissSearchParameters :: ^opaque // We use opaque because it's a facade C api wrapping C++
 FaissRangeSearchResult :: ^opaque
 FaissIDSelector :: ^opaque
-
-// Specific ID selector variants
 FaissIDSelectorRange :: ^opaque
 FaissIDSelectorOr :: ^opaque
 FaissIDSelectorAnd :: ^opaque
-
 FaissIndex :: ^opaque
 FaissIndexFlat :: ^opaque
 FaissIndexFlatIP :: ^opaque
@@ -39,7 +28,6 @@ FaissIndexRefineFlat :: ^opaque
 FaissIndexFlat1D :: ^opaque
 
 
-// Main foreign import block for IndexFlat functions
 @(default_calling_convention = "c", link_prefix = "faiss_")
 foreign lib {
 	// Error API (error_c.h)
@@ -89,16 +77,12 @@ foreign lib {
 
 	IndexFlat_new_with :: proc(p_index: ^^FaissIndexFlat, d: idx_t, metric: FaissMetricType) -> c.int ---
 
-	// Access to internal data
 	IndexFlat_xb :: proc(index: ^FaissIndexFlat, p_xb: ^^c.float, p_size: ^c.size_t) ---
 
-	// Downcast function (checks if index is IndexFlat)
 	IndexFlat_cast :: proc(index: ^FaissIndex) -> ^FaissIndexFlat ---
 
-	// Destructor
 	IndexFlat_free :: proc(index: ^FaissIndexFlat) ---
 
-	// Distance computation
 	IndexFlat_compute_distance_subset :: proc(index: ^FaissIndex, n: idx_t, x: [^]c.float, k: idx_t, distances: [^]c.float, labels: [^]idx_t) -> c.int ---
 
 	// IndexFlatIP (Inner Product)
@@ -177,7 +161,7 @@ create_index_flat :: proc(
 	return index, .None
 }
 
-// Wrapper for IndexFlatL2 creation  
+// Wrapper for IndexFlatL2 creation
 create_index_flat_l2 :: proc(dimension: int) -> (^FaissIndexFlatL2, IndexFlatError) {
 	if dimension <= 0 {
 		return nil, .InvalidDimension
@@ -280,7 +264,6 @@ compute_distances_subset :: proc(
 	return distances_result, true
 }
 
-// Type checking helpers
 is_index_flat :: proc(index: ^FaissIndex) -> bool {
 	return IndexFlat_cast(index) != nil
 }
