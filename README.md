@@ -23,7 +23,7 @@ You have to pass the rpath to the faiss library to the linker, for example:
 The bindings are not done, i have only gotten far enough to run the example.
 
 ### TODO
-- [] Complete bindings for remaining FAISS C API functions
+- [ ] Complete bindings for remaining FAISS C API functions
   - [ ] Inverted File Index
   - [ ] Flat inverted File Index
   - [ ] Scalar Quantizers
