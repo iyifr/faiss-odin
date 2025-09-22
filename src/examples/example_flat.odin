@@ -3,6 +3,7 @@ package main
 import faiss "../faiss"
 import "core:c"
 import "core:fmt"
+import time "core:time"
 
 drand01 :: proc(i: int) -> f32 {
 	// Simple deterministic pseudo-random in [0,1)
@@ -13,11 +14,13 @@ drand01 :: proc(i: int) -> f32 {
 }
 
 main :: proc() {
+	stopwatch := time.Stopwatch{}
+	time.stopwatch_start(&stopwatch)
 	fmt.println("Generating some data...")
 
 	d := 128
-	nb := 100_000
-	nq := 10_000
+	nb := 1_500_000
+	nq := 1000
 
 	xb := make([]f32, d * nb)
 	xq := make([]f32, d * nq)
@@ -34,6 +37,9 @@ main :: proc() {
 		}
 		xq[d * i] += f32(i) / 1000.0
 	}
+	time.stopwatch_stop(&stopwatch)
+	fmt.println("Generating some data took", stopwatch._accumulation)
+	time.stopwatch_reset(&stopwatch)
 
 	fmt.println("Building an index...")
 
