@@ -1,26 +1,19 @@
-package main
+package example
 
 import faiss "../faiss"
 import "core:c"
 import "core:fmt"
+import strings "core:strings"
 import time "core:time"
 
-drand01 :: proc(i: int) -> f32 {
-	// Simple deterministic pseudo-random in [0,1)
-	seed := u64(1469598103934665603) * u64(i * 1099511627)
-	seed = seed * 1099511628211
-	val := f32(seed & 0xFFFFFF) / f32(0x1000000)
-	return val
-}
-
-main :: proc() {
+example_flat :: proc() {
 	stopwatch := time.Stopwatch{}
 	time.stopwatch_start(&stopwatch)
 	fmt.println("Generating some data...")
 
 	d := 128
-	nb := 1_500_000
-	nq := 1000
+	nb := 5_000_000
+	nq := 100
 
 	xb := make([]f32, d * nb)
 	xq := make([]f32, d * nq)
@@ -46,20 +39,33 @@ main :: proc() {
 	desc: cstring = "Flat"
 	index: ^faiss.FaissIndex
 	if faiss.index_factory(&index, c.int(d), desc, faiss.MetricType.METRIC_L2) != 0 {
-		fmt.printf("Factory failed: %s\n", faiss.get_last_error())
+		err_string_from_faiss := faiss.get_last_error()
+		err_string, err := strings.clone_from_cstring(
+			err_string_from_faiss^,
+			context.temp_allocator,
+		)
+
+		if err != nil {
+			fmt.println("An error occured")
+		}
+		fmt.printf("Index_add failed: %s\n", err_string)
+
 		return
 	}
+
+	fmt.printf("is Index Flat LP = %s\n", faiss.is_index_flat(index) == true ? "true" : "false")
 
 	fmt.printf("is_trained = %s\n", faiss.Index_is_trained(index) != 0 ? "true" : "false")
 
+	faiss.Index_train(index, faiss.idx_t(nb), raw_data(xb[0:1000]))
+
 	// add
 	if faiss.Index_add(index, faiss.idx_t(nb), raw_data(xb)) != 0 {
-		fmt.printf("Index_add failed: %s\n", faiss.get_last_error())
+		fmt.printf("Index_add failed: %s\n", string(faiss.get_last_error()^))
 		return
 	}
 
-	fmt.printf("ntotal = %lld\n", faiss.Index_ntotal(index))
-
+	fmt.printf("ntotal = %d\n", faiss.Index_ntotal(index))
 
 	fmt.println("Searching...")
 	k := 5
@@ -123,7 +129,8 @@ main :: proc() {
 		D := make([]f32, k * nq)
 		range_sel: ^faiss.FaissIDSelectorRange
 		if faiss.IDSelectorRange_new(&range_sel, faiss.idx_t(50), faiss.idx_t(100)) != 0 {
-			fmt.printf("IDSelectorRange_new failed: %s\n", faiss.get_last_error())
+
+			fmt.printf("IDSelectorRange_new failed: %s\n", cstring(faiss.get_last_error()^))
 			return
 		}
 		params: ^faiss.FaissSearchParameters
@@ -142,7 +149,10 @@ main :: proc() {
 			   raw_data(I),
 		   ) !=
 		   0 {
-			fmt.printf("Index_search_with_params (range) failed: %s\n", faiss.get_last_error())
+			fmt.printf(
+				"Index_search_with_params (range) failed: %s\n",
+				cstring(faiss.get_last_error()^),
+			)
 			faiss.SearchParameters_free(params)
 			faiss.IDSelectorRange_free(range_sel)
 			return
@@ -293,7 +303,7 @@ main :: proc() {
 	}
 
 	fmt.println("Saving index to disk...")
-	filename: cstring = "example.index"
+	filename: cstring = "flat.index"
 
 	_ = faiss.write_index_fname(index, filename)
 
