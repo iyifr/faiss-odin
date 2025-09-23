@@ -1,9 +1,12 @@
 package faiss
 
+import "base:runtime"
 import "core:c"
+import "core:fmt"
+import "core:strings"
 
 when ODIN_OS == .Darwin {
-	foreign import lib "system:faiss_c"
+	foreign import lib "system:/usr/local/lib/libfaiss_c.dylib"
 } else when ODIN_OS == .Linux {
 	foreign import lib "system:faiss_c"
 } else when ODIN_OS == .Windows {
@@ -12,9 +15,9 @@ when ODIN_OS == .Darwin {
 	foreign import lib "system:faiss_c"
 }
 
-opaque :: struct {}
+opaque :: rawptr
 FaissMetricType :: MetricType
-FaissSearchParameters :: ^opaque // We use opaque because it's a facade C api wrapping C++
+FaissSearchParameters :: ^opaque
 FaissRangeSearchResult :: ^opaque
 FaissIDSelector :: ^opaque
 FaissIDSelectorRange :: ^opaque
@@ -38,6 +41,7 @@ foreign lib {
 
 	// Index I/O (index_io_c.h)
 	write_index_fname :: proc(index: ^FaissIndex, fname: cstring) -> c.int ---
+	read_index_fname :: proc(fname: cstring, io_flags: rawptr, p_out: ^^FaissIndex) -> c.int ---
 
 	SearchParameters_new :: proc(p_sp: ^^FaissSearchParameters, sel: ^FaissIDSelector) -> c.int ---
 	SearchParameters_free :: proc(sp: ^FaissSearchParameters) ---
@@ -50,7 +54,7 @@ foreign lib {
 	Index_verbose :: proc(index: ^FaissIndex, p_verbose: ^c.int) -> c.int ---
 	Index_set_verbose :: proc(index: ^FaissIndex, verbose: c.int) -> c.int ---
 
-	// Core index operations
+	// *Train an index*
 	Index_train :: proc(index: ^FaissIndex, n: idx_t, x: [^]c.float) -> c.int ---
 	Index_add :: proc(index: ^FaissIndex, n: idx_t, x: [^]c.float) -> c.int ---
 	Index_add_with_ids :: proc(index: ^FaissIndex, n: idx_t, x: [^]c.float, xids: [^]idx_t) -> c.int ---
@@ -265,23 +269,23 @@ compute_distances_subset :: proc(
 }
 
 is_index_flat :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlat_cast(index) != nil
+	return IndexFlat_cast(index) != c.NULL
 }
 
 is_index_flat_l2 :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlatL2_cast(index) != nil
+	return IndexFlatL2_cast(index) != c.NULL
 }
 
 is_index_flat_ip :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlatIP_cast(index) != nil
+	return IndexFlatIP_cast(index) != c.NULL
 }
 
 is_index_refine_flat :: proc(index: ^FaissIndex) -> bool {
-	return IndexRefineFlat_cast(index) != nil
+	return IndexRefineFlat_cast(index) != c.NULL
 }
 
 is_index_flat_1d :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlat1D_cast(index) != nil
+	return IndexFlat1D_cast(index) != c.NULL
 }
 
 // Safe casting functions that return nil on failure
