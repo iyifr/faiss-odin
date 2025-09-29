@@ -33,8 +33,12 @@ FaissIndexFlat1D :: ^opaque
 
 @(default_calling_convention = "c", link_prefix = "faiss_")
 foreign lib {
+
+	get_version :: proc() -> cstring ---
+
 	// Error API (error_c.h)
 	get_last_error :: proc() -> ^cstring ---
+
 
 	// Index factory (index_factory_c.h)
 	index_factory :: proc(p_index: ^^FaissIndex, d: c.int, description: cstring, metric: FaissMetricType) -> c.int ---

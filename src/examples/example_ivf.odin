@@ -61,8 +61,6 @@ example_ivf :: proc() {
 	fmt.println("Generating some data took", stopwatch._accumulation)
 	time.stopwatch_reset(&stopwatch)
 
-	fmt.println("Building an index...")
-
 	desc: cstring = "IVF256,Flat"
 	index: ^faiss.FaissIndex
 	index_name: cstring = "ivx.index"
