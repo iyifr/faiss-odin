@@ -35,17 +35,8 @@ example_flat :: proc() {
 	desc: cstring = "Flat"
 	index: ^faiss.FaissIndex
 	if faiss.index_factory(&index, c.int(d), desc, faiss.MetricType.METRIC_INNER_PRODUCT) != 0 {
-		err_string_from_faiss := faiss.get_last_error()
-		err_string, err := strings.clone_from_cstring(
-			err_string_from_faiss,
-			context.temp_allocator,
-		)
-
-		if err != nil {
-			fmt.println("An error occured")
-		}
-		fmt.printf("Index_add failed: %v\n", err_string)
-
+		err_string_from_faiss := faiss.get_error()
+		fmt.printf("An error occured: %s\n", err_string_from_faiss)
 		return
 	}
 
@@ -106,7 +97,7 @@ example_flat :: proc() {
 			   raw_data(I),
 		   ) !=
 		   0 {
-			fmt.printf("Index_search (xq) failed: %s\n", faiss.get_last_error())
+			fmt.printf("Index_search (xq) failed: %s\n", faiss.get_error())
 			return
 		}
 		fmt.println("I=")
@@ -126,12 +117,12 @@ example_flat :: proc() {
 		range_sel: ^faiss.FaissIDSelectorRange
 		if faiss.IDSelectorRange_new(&range_sel, faiss.idx_t(50), faiss.idx_t(100)) != 0 {
 
-			fmt.printf("IDSelectorRange_new failed: %s\n", cstring(faiss.get_last_error()))
+			fmt.printf("IDSelectorRange_new failed: %s\n", faiss.get_error())
 			return
 		}
 		params: ^faiss.FaissSearchParameters
 		if faiss.SearchParameters_new(&params, (^faiss.FaissIDSelector)(range_sel)) != 0 {
-			fmt.printf("SearchParameters_new failed: %s\n", faiss.get_last_error())
+			fmt.printf("SearchParameters_new failed: %s\n", faiss.get_error())
 			faiss.IDSelectorRange_free(range_sel)
 			return
 		}
@@ -145,10 +136,7 @@ example_flat :: proc() {
 			   raw_data(I),
 		   ) !=
 		   0 {
-			fmt.printf(
-				"Index_search_with_params (range) failed: %s\n",
-				cstring(faiss.get_last_error()),
-			)
+			fmt.printf("Index_search_with_params (range) failed: %s\n", faiss.get_error())
 			faiss.SearchParameters_free(params)
 			faiss.IDSelectorRange_free(range_sel)
 			return

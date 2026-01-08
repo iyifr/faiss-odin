@@ -141,3 +141,7 @@ foreign lib {
 is_index_flat :: proc(index: ^FaissIndex) -> bool {
 	return IndexFlat_cast(index) != c.NULL
 }
+
+get_error :: proc() -> string {
+	return string(get_last_error())
+}
