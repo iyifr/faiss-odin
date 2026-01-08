@@ -1,14 +1,12 @@
 package faiss
 
 MetricType :: enum {
-	METRIC_INNER_PRODUCT = 0, ///< maximum inner product search
+	METRIC_INNER_PRODUCT = 105, ///< maximum inner product search
 	METRIC_L2 = 1, ///< squared L2 search
 	METRIC_L1, ///< L1 (aka cityblock)
 	METRIC_Linf, ///< infinity distance
 	METRIC_Lp, ///< L_p distance, p is given by a faiss::Index
 	/// metric_arg
-
-	/// some additional metrics defined in scipy.spatial.distance
 	METRIC_Canberra = 20,
 	METRIC_BrayCurtis,
 	METRIC_JensenShannon,

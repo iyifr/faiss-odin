@@ -12,43 +12,39 @@ example_flat :: proc() {
 	fmt.println("Generating some data...")
 
 	d := 128
-	nb := 5_000_000
+	nb := 5000
 	nq := 100
 
 	xb := make([]f32, d * nb)
 	xq := make([]f32, d * nq)
 
-	for i in 0 ..< nb {
-		for j in 0 ..< d {
-			xb[d * i + j] = drand01(i * d + j)
-		}
-		xb[d * i] += f32(i) / 1000.0
+	defer {
+		delete(xb)
+		delete(xq)
 	}
-	for i in 0 ..< nq {
-		for j in 0 ..< d {
-			xq[d * i + j] = drand01(17 + i * d + j)
-		}
-		xq[d * i] += f32(i) / 1000.0
-	}
+
+	gen_embeddings(&xb, d, nb)
+	gen_embeddings(&xq, d, nq)
+
 	time.stopwatch_stop(&stopwatch)
-	fmt.println("Generating some data took", stopwatch._accumulation)
 	time.stopwatch_reset(&stopwatch)
+	fmt.println("Generating some data took", stopwatch._accumulation)
 
+	// Build index
 	fmt.println("Building an index...")
-
 	desc: cstring = "Flat"
 	index: ^faiss.FaissIndex
-	if faiss.index_factory(&index, c.int(d), desc, faiss.MetricType.METRIC_L2) != 0 {
+	if faiss.index_factory(&index, c.int(d), desc, faiss.MetricType.METRIC_INNER_PRODUCT) != 0 {
 		err_string_from_faiss := faiss.get_last_error()
 		err_string, err := strings.clone_from_cstring(
-			err_string_from_faiss^,
+			err_string_from_faiss,
 			context.temp_allocator,
 		)
 
 		if err != nil {
 			fmt.println("An error occured")
 		}
-		fmt.printf("Index_add failed: %s\n", err_string)
+		fmt.printf("Index_add failed: %v\n", err_string)
 
 		return
 	}
@@ -61,7 +57,7 @@ example_flat :: proc() {
 
 	// add
 	if faiss.Index_add(index, faiss.idx_t(nb), raw_data(xb)) != 0 {
-		fmt.printf("Index_add failed: %s\n", string(faiss.get_last_error()^))
+		fmt.printf("Index_add failed: %s\n", string(faiss.get_last_error()))
 		return
 	}
 
@@ -130,7 +126,7 @@ example_flat :: proc() {
 		range_sel: ^faiss.FaissIDSelectorRange
 		if faiss.IDSelectorRange_new(&range_sel, faiss.idx_t(50), faiss.idx_t(100)) != 0 {
 
-			fmt.printf("IDSelectorRange_new failed: %s\n", cstring(faiss.get_last_error()^))
+			fmt.printf("IDSelectorRange_new failed: %s\n", cstring(faiss.get_last_error()))
 			return
 		}
 		params: ^faiss.FaissSearchParameters
@@ -151,7 +147,7 @@ example_flat :: proc() {
 		   0 {
 			fmt.printf(
 				"Index_search_with_params (range) failed: %s\n",
-				cstring(faiss.get_last_error()^),
+				cstring(faiss.get_last_error()),
 			)
 			faiss.SearchParameters_free(params)
 			faiss.IDSelectorRange_free(range_sel)
@@ -309,9 +305,5 @@ example_flat :: proc() {
 
 	fmt.println("Freeing index...")
 	faiss.Index_free(index)
-
-	delete(xb)
-	delete(xq)
-
 	fmt.println("Done.")
 }

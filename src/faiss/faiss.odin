@@ -33,12 +33,10 @@ FaissIndexFlat1D :: ^opaque
 
 @(default_calling_convention = "c", link_prefix = "faiss_")
 foreign lib {
-
 	get_version :: proc() -> cstring ---
 
 	// Error API (error_c.h)
-	get_last_error :: proc() -> ^cstring ---
-
+	get_last_error :: proc() -> cstring ---
 
 	// Index factory (index_factory_c.h)
 	index_factory :: proc(p_index: ^^FaissIndex, d: c.int, description: cstring, metric: FaissMetricType) -> c.int ---
@@ -46,9 +44,6 @@ foreign lib {
 	// Index I/O (index_io_c.h)
 	write_index_fname :: proc(index: ^FaissIndex, fname: cstring) -> c.int ---
 	read_index_fname :: proc(fname: cstring, io_flags: rawptr, p_out: ^^FaissIndex) -> c.int ---
-
-	SearchParameters_new :: proc(p_sp: ^^FaissSearchParameters, sel: ^FaissIDSelector) -> c.int ---
-	SearchParameters_free :: proc(sp: ^FaissSearchParameters) ---
 
 	Index_d :: proc(index: ^FaissIndex, p_d: ^c.int) -> c.int ---
 	Index_is_trained :: proc(index: ^FaissIndex) -> c.int ---
@@ -138,177 +133,11 @@ foreign lib {
 	IDSelectorRange_free :: proc(sel: ^FaissIDSelectorRange) ---
 	IDSelectorOr_new :: proc(p_sel: ^^FaissIDSelectorOr, lhs: ^FaissIDSelector, rhs: ^FaissIDSelector) -> c.int ---
 	IDSelectorAnd_new :: proc(p_sel: ^^FaissIDSelectorAnd, lhs: ^FaissIDSelector, rhs: ^FaissIDSelector) -> c.int ---
-}
 
-IndexFlatError :: enum {
-	None = 0,
-	CreationFailed,
-	InvalidDimension,
-	AddFailed,
-	SearchFailed,
-}
-
-// Wrapper for IndexFlat creation
-create_index_flat :: proc(
-	dimension: int,
-	metric: FaissMetricType = MetricType.METRIC_L1,
-) -> (
-	^FaissIndexFlat,
-	IndexFlatError,
-) {
-	if dimension <= 0 {
-		return nil, .InvalidDimension
-	}
-
-	index: ^FaissIndexFlat
-	result := IndexFlat_new_with(&index, idx_t(dimension), metric)
-	if result != 0 {
-		return nil, .CreationFailed
-	}
-
-	return index, .None
-}
-
-// Wrapper for IndexFlatL2 creation
-create_index_flat_l2 :: proc(dimension: int) -> (^FaissIndexFlatL2, IndexFlatError) {
-	if dimension <= 0 {
-		return nil, .InvalidDimension
-	}
-
-	index: ^FaissIndexFlatL2
-	result := IndexFlatL2_new_with(&index, idx_t(dimension))
-	if result != 0 {
-		return nil, .CreationFailed
-	}
-
-	return index, .None
-}
-
-// Wrapper for IndexFlatIP creation
-create_index_flat_ip :: proc(dimension: int) -> (^FaissIndexFlatIP, IndexFlatError) {
-	if dimension <= 0 {
-		return nil, .InvalidDimension
-	}
-
-	index: ^FaissIndexFlatIP
-	result := IndexFlatIP_new_with(&index, idx_t(dimension))
-	if result != 0 {
-		return nil, .CreationFailed
-	}
-
-	return index, .None
-}
-
-// Wrapper for IndexFlat1D creation
-create_index_flat_1d :: proc(
-	continuous_update: bool = false,
-) -> (
-	^FaissIndexFlat1D,
-	IndexFlatError,
-) {
-	index: ^FaissIndexFlat1D
-	update_flag := continuous_update ? 1 : 0
-	result := IndexFlat1D_new_with(&index, c.int(update_flag))
-	if result != 0 {
-		return nil, .CreationFailed
-	}
-
-	return index, .None
-}
-
-// Wrapper for getting internal data
-get_index_flat_data :: proc(index: ^FaissIndexFlat) -> (data: []f32, ok: bool) {
-	xb: ^c.float
-	size: c.size_t
-
-	IndexFlat_xb(index, &xb, &size)
-
-	if xb == nil || size == 0 {
-		return nil, false
-	}
-
-	// Convert C array to Odin slice
-	raw_data := ([^]f32)(xb)
-	return raw_data[:size], true
-}
-
-// Wrapper for distance computation
-compute_distances_subset :: proc(
-	index: ^FaissIndex,
-	queries: []f32,
-	query_dimension: int,
-	labels: []idx_t,
-	k: int,
-) -> (
-	distances: []f32,
-	ok: bool,
-) {
-
-	if len(queries) == 0 || len(labels) == 0 || k <= 0 {
-		return nil, false
-	}
-
-	n_queries := len(queries) / query_dimension
-	if n_queries * k != len(labels) {
-		return nil, false
-	}
-
-	distances_result := make([]f32, len(labels))
-
-	result := IndexFlat_compute_distance_subset(
-		index,
-		idx_t(n_queries),
-		raw_data(queries),
-		idx_t(k),
-		([^]c.float)(raw_data(distances_result)),
-		raw_data(labels),
-	)
-
-	if result != 0 {
-		delete(distances_result)
-		return nil, false
-	}
-
-	return distances_result, true
+	SearchParameters_new :: proc(p_sp: ^^FaissSearchParameters, sel: ^FaissIDSelector) -> c.int ---
+	SearchParameters_free :: proc(sp: ^FaissSearchParameters) ---
 }
 
 is_index_flat :: proc(index: ^FaissIndex) -> bool {
 	return IndexFlat_cast(index) != c.NULL
-}
-
-is_index_flat_l2 :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlatL2_cast(index) != c.NULL
-}
-
-is_index_flat_ip :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlatIP_cast(index) != c.NULL
-}
-
-is_index_refine_flat :: proc(index: ^FaissIndex) -> bool {
-	return IndexRefineFlat_cast(index) != c.NULL
-}
-
-is_index_flat_1d :: proc(index: ^FaissIndex) -> bool {
-	return IndexFlat1D_cast(index) != c.NULL
-}
-
-// Safe casting functions that return nil on failure
-as_index_flat :: proc(index: ^FaissIndex) -> ^FaissIndexFlat {
-	return IndexFlat_cast(index)
-}
-
-as_index_flat_l2 :: proc(index: ^FaissIndex) -> ^FaissIndexFlatL2 {
-	return IndexFlatL2_cast(index)
-}
-
-as_index_flat_ip :: proc(index: ^FaissIndex) -> ^FaissIndexFlatIP {
-	return IndexFlatIP_cast(index)
-}
-
-as_index_refine_flat :: proc(index: ^FaissIndex) -> ^FaissIndexRefineFlat {
-	return IndexRefineFlat_cast(index)
-}
-
-as_index_flat_1d :: proc(index: ^FaissIndex) -> ^FaissIndexFlat1D {
-	return IndexFlat1D_cast(index)
 }

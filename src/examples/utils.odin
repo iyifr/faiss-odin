@@ -7,3 +7,12 @@ drand01 :: proc(i: int) -> f32 {
 	val := f32(seed & 0xFFFFFF) / f32(0x1000000)
 	return val
 }
+
+gen_embeddings :: proc(box: ^[]f32, dim: int, num_embeddings: int) {
+	for i in 0 ..< num_embeddings {
+		for j in 0 ..< dim {
+			box^[dim * i + j] = drand01(i * dim + j)
+		}
+		box^[dim * i] += f32(i) / 1000.0
+	}
+}

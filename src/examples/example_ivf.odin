@@ -11,9 +11,9 @@ example_ivf :: proc() {
 	time.stopwatch_start(&stopwatch)
 	fmt.println("Generating some data...")
 
-	d := 128
+	d := 1536
 	nb := 5000
-	nq := 1000
+	nq := 1
 
 	xb := make([]f32, d * nb)
 	xq := make([]f32, d * nq)
@@ -45,7 +45,7 @@ example_ivf :: proc() {
 		}
 
 		fmt.println("First 3 vectors in xq:")
-		for i in 0 ..< 3 {
+		for i in 0 ..< nq {
 			fmt.printf("xq[%d]: [", i)
 			for j in 0 ..< d {
 				fmt.printf("%.3f", xq[i * d + j])
@@ -74,7 +74,7 @@ example_ivf :: proc() {
 		if faiss.index_factory(&index, c.int(d), desc, faiss.MetricType.METRIC_L2) != 0 {
 			err_string_from_faiss := faiss.get_last_error()
 			err_string, err := strings.clone_from_cstring(
-				err_string_from_faiss^,
+				err_string_from_faiss,
 				context.temp_allocator,
 			)
 
@@ -89,7 +89,7 @@ example_ivf :: proc() {
 		fmt.println("Training the index...")
 		time.stopwatch_start(&stopwatch)
 		if faiss.Index_train(index, faiss.idx_t(nb), raw_data(xb[:1000])) != 0 {
-			err_string, err := strings.clone_from_cstring(faiss.get_last_error()^)
+			err_string, err := strings.clone_from_cstring(faiss.get_last_error())
 			defer delete(err_string)
 			if err != nil {
 				fmt.println("An error occurred during training")
@@ -104,22 +104,25 @@ example_ivf :: proc() {
 		fmt.println("Adding vectors to index")
 
 		// add
-		if faiss.Index_add(index, faiss.idx_t(nb), raw_data(xb[0:300])) != 0 {
-			fmt.printf("Index_add failed: %s\n", cstring(faiss.get_last_error()^))
+		if faiss.Index_add(index, faiss.idx_t(nb), raw_data(xb)) != 0 {
+			fmt.printf("Index_add failed: %s\n", cstring(faiss.get_last_error()))
 			return
 		}
+
+		fmt.printf("ntotal = %d\n", faiss.Index_ntotal(index))
 	}
 
 	fmt.printf("Is Index Flat = %s\n", faiss.is_index_flat(index) == true ? "true" : "false")
 
 	fmt.printf("is Index trained = %s\n", faiss.Index_is_trained(index) != 0 ? "true" : "false")
 
+
 	// If index has not already been trained (for loaded indexes that weren't trained).
 	if faiss.Index_is_trained(index) == 0 {
 		fmt.println("Training the loaded index...")
 		time.stopwatch_start(&stopwatch)
 		if faiss.Index_train(index, faiss.idx_t(nb), raw_data(xb)) != 0 {
-			err_string, err := strings.clone_from_cstring(faiss.get_last_error()^)
+			err_string, err := strings.clone_from_cstring(faiss.get_last_error())
 			defer delete(err_string)
 			if err != nil {
 				fmt.println("An error occurred during training")
@@ -190,9 +193,9 @@ example_ivf :: proc() {
 			return
 		}
 		fmt.println("I=")
-		for i in 0 ..< 5 {
+		for i in 0 ..< nq {
 			for j in 0 ..< k {
-				fmt.printf("%d (d=%2.3f)  ", I[i * (k + j)], D[i * (k + j)])
+				fmt.printf("%d (d=%2.3f)  ", I[i * k + j], D[i * k + j])
 			}
 			fmt.println("")
 		}
